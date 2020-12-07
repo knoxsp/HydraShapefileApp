@@ -25,8 +25,8 @@ import json
 from osgeo import ogr
 from osgeo import osr
 
-from HydraLib.PluginLib import temp_ids
-from HydraLib.PluginLib import HydraPluginError
+from hydra_client import temp_ids
+from hydra_client import HydraPluginError
 
 from epsg_lookup import prj2epsg
 from hydra_network import HydraNetwork
@@ -329,8 +329,7 @@ class ShapefileApp(HydraNetwork):
 
             target_file = self.driver.CreateDataSource(outfile)
 
-            target_layer = target_file.CreateLayer(nodetype.encode('ascii',
-                                                                   'ignore'),
+            target_layer = target_file.CreateLayer(str(nodetype),
                                                    projection,
                                                    geom_type=ogr.wkbPoint)
 
@@ -351,8 +350,9 @@ class ShapefileApp(HydraNetwork):
             for attr in attrs.keys():
                 type_set = set(attrs[attr])
                 if len(type_set) > 1:
-                    raise HydraPluginError(
+                    print(
                         "Ambiguous data type for attribute '%s'." % attr)
+                    field_type[attr] = list(type_set)[0]
                 else:
                     field_type[attr] = type_set.pop()
 
@@ -360,7 +360,7 @@ class ShapefileApp(HydraNetwork):
             name_field = ogr.FieldDefn('name', ogr.OFTString)
             target_layer.CreateField(name_field)
             for attr in field_type.keys():
-                field[attr] = ogr.FieldDefn(attr.encode('ascii', 'ignore'),
+                field[attr] = ogr.FieldDefn(str(attr),
                                             field_type[attr])
                 target_layer.CreateField(field[attr])
 
@@ -376,10 +376,10 @@ class ShapefileApp(HydraNetwork):
                 node_feature = ogr.Feature(featureDefn)
                 node_feature.SetGeometry(node_geom)
                 node_feature.SetField('name',
-                                      node.name.encode('ascii', 'ignore'))
+                                      str(node.name))
                 for attr in node.attributes:
                     node_feature.SetField( \
-                        attr.name.encode('ascii', 'ignore')[:10],
+                        str(attr.name)[:10],
                         attr.value)
                 target_layer.CreateFeature(node_feature)
                 node_feature.Destroy()
@@ -400,7 +400,7 @@ class ShapefileApp(HydraNetwork):
 
             target_file = self.driver.CreateDataSource(outfile)
 
-            target_layer = target_file.CreateLayer(linktype.encode('ascii'),
+            target_layer = target_file.CreateLayer(str(linktype),
                 projection, geom_type=ogr.wkbMultiLineString)
 
             featureDefn = target_layer.GetLayerDefn()
@@ -419,8 +419,8 @@ class ShapefileApp(HydraNetwork):
             for attr in attrs.keys():
                 type_set = set(attrs[attr])
                 if len(type_set) > 1:
-                    raise HydraPluginError(
-                        "Ambiguous data type for attribute '%s'." % attr)
+                    print("Ambiguous data type for attribute '%s'." % attr)
+                    field_type[attr] = list(type_set)[0]
                 else:
                     field_type[attr] = type_set.pop()
 
@@ -428,12 +428,12 @@ class ShapefileApp(HydraNetwork):
             name_field = ogr.FieldDefn('name', ogr.OFTString)
             target_layer.CreateField(name_field)
             for attr in field_type.keys():
-                field[attr] = ogr.FieldDefn(attr.encode('ascii', 'ignore'),
+                field[attr] = ogr.FieldDefn(str(attr),
                                             field_type[attr])
                 target_layer.CreateField(field[attr])
 
             for link in self._link_type_index[linktype]:
-                if 'geometry' in link.layout.keys():
+                if link.layout and 'geometry' in link.layout.keys():
                     geom = json.dumps(link.layout['geometry'])
                     link_geom = ogr.CreateGeometryFromJson(geom)
                 else:
@@ -443,10 +443,10 @@ class ShapefileApp(HydraNetwork):
                 link_feature = ogr.Feature(featureDefn)
                 link_feature.SetGeometry(link_geom)
                 link_feature.SetField('name',
-                                      link.name.encode('ascii', 'ignore'))
+                                      str(link.name))
                 for attr in link.attributes:
                     link_feature.SetField( \
-                        attr.name.encode('ascii', 'ignore')[:10],
+                        str(attr.name)[:10],
                         attr.value)
                 target_layer.CreateFeature(link_feature)
                 link_feature.Destroy()

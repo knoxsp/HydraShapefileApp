@@ -23,16 +23,16 @@ import warnings
 
 from datetime import datetime
 
-from HydraLib.PluginLib import HydraResource
-from HydraLib.PluginLib import JsonConnection
-from HydraLib.PluginLib import HydraPluginError
+from hydra_client import HydraResource
+from hydra_client import JSONConnection
+from hydra_client import HydraPluginError
 
 
 class HydraNetwork(HydraResource):
 
     def __init__(self, url=None, username=None, password=None):
         super(HydraNetwork, self).__init__()
-        self.conn = JsonConnection(url=url, app_name='ShapefileApp')
+        self.conn = JSONConnection(url=url, app_name='ShapefileApp')
         self.url = url
         self.username = username
         self.password = password
@@ -61,7 +61,7 @@ class HydraNetwork(HydraResource):
             self.session_id = self.conn.login()
 
     def load_attributes(self):
-        self.hydra_attributes = self.conn.call('get_all_attributes', {})
+        self.hydra_attributes = self.conn.get_attributes()
         for attr in self.hydra_attributes:
             self.attrs[attr.id] = attr
             self.attr_ids[attr.name] = attr.id
@@ -72,9 +72,8 @@ class HydraNetwork(HydraResource):
         if self.project is None:
             self.load_project(network_id=network_id)
 
-        self.hydra_network = self.conn.call('get_network',
-                                            {'network_id': network_id,
-                                             'include_data': 'Y'})
+        self.hydra_network = self.conn.get_network(network_id=network_id,
+                                             include_data=True)
 
         self.load_attributes()
 
@@ -152,11 +151,9 @@ class HydraNetwork(HydraResource):
         """Load a project by its ID or by a network ID.
         """
         if project_id is not None:
-            self.project = self.conn.call('get_project',
-                                          {'project_id': project_id})
+            self.project = self.conn.get_project(project_id=project_id)
         elif network_id is not None:
-            self.project = self.conn.call('get_network_project',
-                                          {'network_id': network_id})
+            self.project = self.conn.get_network_project(network_id=network_id)
 
     def create_project(self, name=None):
         self.project = dict()
@@ -166,8 +163,7 @@ class HydraNetwork(HydraResource):
             self.project['name'] = "Shapefile import @ %s" % datetime.now()
         self.project['description'] = ''
         self.project['status'] = 'A'
-        self.project = self.conn.call('add_project',
-                                      {'project': self.project})
+        self.project = self.conn.add_project(project=self.project)
 
     def add_node(self, node):
         if self.node_names.get(node.name.lower()) is not None:
@@ -226,8 +222,7 @@ class HydraNetwork(HydraResource):
             self.hydra_network['links'].append(hydra_link)
 
         self.hydra_network['scenarios'].append(self.hydra_scenario)
-        net_summary = self.conn.call('add_network',
-                                     {'net': self.hydra_network})
+        net_summary = self.conn.add_network(net=self.hydra_network)
 
         return net_summary
 
@@ -316,7 +311,7 @@ class HydraSimpleLink(HydraResource):
 class HydraNetworkTree(object):
 
     def __init__(self, url=None, username=None, password=None):
-        self.conn = JsonConnection(url)
+        self.conn = JSONConnection(url)
         if username is not None and password is not None:
             self.session_id = self.conn.login(username=username,
                                               password=password)
@@ -326,11 +321,10 @@ class HydraNetworkTree(object):
         self.projects = dict()
 
     def get_tree(self):
-        project_list = self.conn.call('get_projects', {})
+        project_list = self.conn.get_projects()
         for project in project_list:
-            networks = self.conn.call('get_networks',
-                                      {'project_id': project['id'],
-                                       'include_data': 'N'})
+            networks = self.conn.get_networks(project_id=project['id'],
+                                       include_data=False)
             project['networks'] = networks
             self.projects.update({project['id']: project})
 
@@ -345,7 +339,7 @@ class HydraNetworkTree(object):
             ne_col = ''
             sc_col = ''
             endtag = ''
-        for pid, project in self.projects.iteritems():
+        for pid, project in self.projects.items():
             print('%sP %3d %s%s' %
                   (pr_col, pid, project['name'], endtag))
             for network in project['networks']:
