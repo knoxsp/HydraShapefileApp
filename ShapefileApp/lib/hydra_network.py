@@ -24,7 +24,7 @@ import warnings
 from datetime import datetime
 
 from hydra_client import HydraResource
-from hydra_client import JSONConnection
+from hydra_client import RemoteJSONConnection
 from hydra_client import HydraPluginError
 
 
@@ -32,7 +32,7 @@ class HydraNetwork(HydraResource):
 
     def __init__(self, url=None, username=None, password=None):
         super(HydraNetwork, self).__init__()
-        self.conn = JSONConnection(url=url, app_name='ShapefileApp')
+        self.conn = RemoteJSONConnection(url=url, app_name='ShapefileApp')
         self.url = url
         self.username = username
         self.password = password
@@ -66,14 +66,16 @@ class HydraNetwork(HydraResource):
             self.attrs[attr.id] = attr
             self.attr_ids[attr.name] = attr.id
 
-    def load_network(self, network_id, scenario_id):
+    def load_network(self, network_id, scenario_id, load_project=False):
         """Load a network from HydraPlatform.
         """
-        if self.project is None:
+        if self.project is None and load_project is True:
             self.load_project(network_id=network_id)
 
         self.hydra_network = self.conn.get_network(network_id=network_id,
-                                             include_data=True)
+                                             include_data=True,
+                                             include_results=True,
+                                             include_attributes=True)
 
         self.load_attributes()
 
@@ -102,7 +104,7 @@ class HydraNetwork(HydraResource):
                 warnings.warn('Could not load EPSG code.')
 
         # Add network attributes
-        for res_attr in self.hydra_network['attributes']:
+        for res_attr in self.hydra_network.get('attributes', []):
             if res_scen_dict.get(res_attr['id']) is not None:
                 res_scen = res_scen_dict[res_attr['id']]
                 self.add_attribute(self.attrs[res_attr['attr_id']],
@@ -133,7 +135,7 @@ class HydraNetwork(HydraResource):
             n_link = HydraLink(start_node=self.nodes[link['node_1_id']],
                                end_node=self.nodes[link['node_2_id']])
             n_link.name = link['name']
-            n_link.layout = link['layout']
+            n_link.layout = link.get('layout')
             n_link.id = link['id']
             n_link.types = link['types']
             for res_attr in link['attributes']:

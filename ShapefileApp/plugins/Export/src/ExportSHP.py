@@ -45,5 +45,5 @@ if __name__ == '__main__':
 
     if args.output is not None:
         # Export network to shapefile
-        exporter.load_network(int(args.network_id), int(args.scenario_id))
+        exporter.load_network(int(args.network_id), int(args.scenario_id), load_project=False)
         exporter.to_shp(args.output, overwrite=args.overwrite)
