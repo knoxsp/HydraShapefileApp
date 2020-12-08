@@ -117,7 +117,7 @@ class HydraNetwork(HydraResource):
         for node in self.hydra_network['nodes']:
             n_node = HydraNode(x=float(node['x']), y=float(node['y']))
             n_node.name = node['name']
-            n_node.layout = node['layout']
+            n_node.layout = node.get('layout')
             n_node.id = node['id']
             n_node.types = node['types']
             for res_attr in node['attributes']:
